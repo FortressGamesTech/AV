@@ -5,6 +5,9 @@ import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import ReactQueryProvider from '@/providers/ReactQueryProvider'
+import { AuthProvider } from '@/hooks/useAuth'
+import AppShell from '@/components/AppShell'
+import React, { ReactElement } from 'react'
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -21,6 +24,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Try to read breadcrumbLabels from the child page (if exported)
+  let breadcrumbLabels = undefined
+  const childrenArray = React.Children.toArray(children)
+  for (const child of childrenArray) {
+    if (
+      React.isValidElement(child) &&
+      child.type &&
+      typeof child.type === 'function' &&
+      'breadcrumbLabels' in child.type
+    ) {
+      breadcrumbLabels = (child.type as any).breadcrumbLabels
+      break
+    }
+  }
+
   return (
     <html
       lang="en"
@@ -36,14 +54,16 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ReactQueryProvider>
-            <main className="flex min-h-screen flex-col items-center">
-              {children}
-              <Analytics />{' '}
-              {/* ^^ remove this if you are not deploying to vercel. See more at https://vercel.com/docs/analytics  */}
-            </main>
-            <ReactQueryDevtools initialIsOpen={false} />
-          </ReactQueryProvider>
+          <AuthProvider>
+            <ReactQueryProvider>
+              <AppShell breadcrumbLabels={breadcrumbLabels}>
+                {children}
+                <Analytics />{' '}
+                {/* ^^ remove this if you are not deploying to vercel. See more at https://vercel.com/docs/analytics  */}
+              </AppShell>
+              <ReactQueryDevtools initialIsOpen={false} />
+            </ReactQueryProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
